@@ -51,7 +51,7 @@ def build_parser(subparsers=None):
                    help="Enable GPU acceleration (FAISS-GPU for KNN, PyTorch for TF-IDF)")
     p.add_argument("--workers",    type=int, default=12,
                    help="CPU thread-pool size for parallel stages")
-    p.add_argument("--batch-size", type=int, default=262144,
+    p.add_argument("--batch-size", type=int, default=8192,
                    help="Documents per GPU batch for TF-IDF (GPU mode only)")
     return p
 
@@ -124,6 +124,17 @@ def _copy_deduplicated(input_dir: str, output_dir: str,
     processed_norm = {os.path.normpath(f) for f in processed_files}
     py_files       = _collect_py_files(input_dir)
 
+    # Pre-create all destination directories in one sequential pass so threads
+    # never call makedirs (which stats the path every time even with exist_ok).
+    needed_dirs = {
+        os.path.dirname(os.path.join(output_dir, os.path.relpath(src, input_dir)))
+        for src in py_files
+        if os.path.normpath(src) in processed_norm
+        and os.path.normpath(src) not in drop_norm
+    }
+    for d in needed_dirs:
+        os.makedirs(d, exist_ok=True)
+
     # Counters shared across threads
     counters = {"copied": 0, "skipped_dupes": 0, "skipped_unprocessed": 0}
     lock = threading.Lock()
@@ -141,7 +152,6 @@ def _copy_deduplicated(input_dir: str, output_dir: str,
         else:
             rel = os.path.relpath(src, input_dir)
             dst = os.path.join(output_dir, rel)
-            os.makedirs(os.path.dirname(dst), exist_ok=True)
             shutil.copy2(src, dst)
             with lock:
                 counters["copied"] += 1

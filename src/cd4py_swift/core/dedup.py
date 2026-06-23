@@ -174,12 +174,13 @@ def find_transitive_duplicate_sets(duplicate_files_set: Dict[str, List[Tuple[str
     files_clone_idx: Dict[str, int]         = {}
     documents_to_visit = set(duplicate_files_set.keys())
 
+    total = len(documents_to_visit)
     with _make_progress() as progress:
-        task = progress.add_task("Resolving transitive clusters", total=len(documents_to_visit))
+        task = progress.add_task("Resolving transitive clusters", total=total)
 
         while documents_to_visit:
+            size_before = len(documents_to_visit)
             current_idx = documents_to_visit.pop()
-            progress.advance(task)
             current_idx_closure = {current_idx}
             visit_queue         = []
 
@@ -196,9 +197,7 @@ def find_transitive_duplicate_sets(duplicate_files_set: Dict[str, List[Tuple[str
                 while visit_queue:
                     other_idx = visit_queue.pop()
                     current_idx_closure.add(other_idx)
-                    if other_idx in documents_to_visit:
-                        documents_to_visit.discard(other_idx)
-                        progress.advance(task)  # account for nodes consumed in inner loop
+                    documents_to_visit.discard(other_idx)
                     visit_queue.extend(
                         nxt[0] for nxt in duplicate_files_set[other_idx]
                         if nxt[0] in documents_to_visit
@@ -206,6 +205,9 @@ def find_transitive_duplicate_sets(duplicate_files_set: Dict[str, List[Tuple[str
                 duplicate_files_closure.append(set(current_idx_closure))
                 for f in current_idx_closure:
                     files_clone_idx[f] = len(duplicate_files_closure) - 1
+
+            # Advance by however many nodes were actually consumed this iteration
+            progress.advance(task, size_before - len(documents_to_visit))
 
     return duplicate_files_closure, [f for c in duplicate_files_closure for f in c]
 
