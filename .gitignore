@@ -1,3 +1,92 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-link
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Distribution / packaging
+.Python
+develop-eggs/
+downloads/
+lib/
+lib64/
+parts/
+sdist/
+var/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+nosetests.xml
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# Environments
+.env
+.env.*
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Ruff / linting
+.ruff_cache/
+
+# IDE
 .idea/
-__pycache__
-*.pyc
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project-specific intermediates
+cd4py_tokens*/
+cd4py_dupes*/
+cd4py_work*/
+*.mmap
+*.annoy
+*.jsonl.gz
+dedup.log

@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cd4py-swift"
+version = "0.1.0"
+description = "Fast, GPU-accelerated near-duplicate detection and removal for Python code datasets"
+requires-python = ">=3.11"
+dependencies = [
+    "dpu-utils",
+    "scikit-learn",
+    "pandas",
+    "numpy",
+    "annoy",
+    "tqdm",
+    "rich",
+    "joblib",
+]
+
+[project.scripts]
+cd4py-swift = "cd4py_swift.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
