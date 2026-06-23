@@ -196,7 +196,9 @@ def find_transitive_duplicate_sets(duplicate_files_set: Dict[str, List[Tuple[str
                 while visit_queue:
                     other_idx = visit_queue.pop()
                     current_idx_closure.add(other_idx)
-                    documents_to_visit.discard(other_idx)
+                    if other_idx in documents_to_visit:
+                        documents_to_visit.discard(other_idx)
+                        progress.advance(task)  # account for nodes consumed in inner loop
                     visit_queue.extend(
                         nxt[0] for nxt in duplicate_files_set[other_idx]
                         if nxt[0] in documents_to_visit

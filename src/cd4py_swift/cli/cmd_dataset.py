@@ -107,18 +107,44 @@ def _collect_py_files(directory: str) -> list[str]:
 
 def _copy_deduplicated(input_dir: str, output_dir: str,
                        to_drop: set[str],
-                       processed_files: set[str]) -> tuple[int, int, int]:
+                       processed_files: set[str],
+                       n_workers: int = 12) -> tuple[int, int, int]:
     """
     Copy files from input_dir to output_dir, applying two filters:
       1. Only copy files CD4Py processed (in processed_files)
       2. Skip files in to_drop (duplicate losers)
 
+    Copies are done in parallel across n_workers threads (I/O bound).
     Returns (copied, skipped_dupes, skipped_unprocessed).
     """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    import threading
+
     drop_norm      = {os.path.normpath(f) for f in to_drop}
     processed_norm = {os.path.normpath(f) for f in processed_files}
     py_files       = _collect_py_files(input_dir)
-    copied = skipped_dupes = skipped_unprocessed = 0
+
+    # Counters shared across threads
+    counters = {"copied": 0, "skipped_dupes": 0, "skipped_unprocessed": 0}
+    lock = threading.Lock()
+
+    def _process(src: str):
+        norm = os.path.normpath(src)
+        if norm not in processed_norm:
+            with lock:
+                counters["skipped_unprocessed"] += 1
+            logging.debug("Skipped (not processed): %s", src)
+        elif norm in drop_norm:
+            with lock:
+                counters["skipped_dupes"] += 1
+            logging.debug("Skipped (duplicate): %s", src)
+        else:
+            rel = os.path.relpath(src, input_dir)
+            dst = os.path.join(output_dir, rel)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copy2(src, dst)
+            with lock:
+                counters["copied"] += 1
 
     with Progress(
         SpinnerColumn(),
@@ -128,24 +154,14 @@ def _copy_deduplicated(input_dir: str, output_dir: str,
         TimeElapsedColumn(),
         console=console,
     ) as progress:
-        task = progress.add_task("Copying files", total=len(py_files))
-        for src in py_files:
-            norm = os.path.normpath(src)
-            if norm not in processed_norm:
-                skipped_unprocessed += 1
-                logging.debug("Skipped (not processed): %s", src)
-            elif norm in drop_norm:
-                skipped_dupes += 1
-                logging.debug("Skipped (duplicate): %s", src)
-            else:
-                rel = os.path.relpath(src, input_dir)
-                dst = os.path.join(output_dir, rel)
-                os.makedirs(os.path.dirname(dst), exist_ok=True)
-                shutil.copy2(src, dst)
-                copied += 1
-            progress.advance(task)
+        task = progress.add_task(f"Copying files ({n_workers} workers)", total=len(py_files))
+        with ThreadPoolExecutor(max_workers=n_workers) as executor:
+            futures = {executor.submit(_process, src): src for src in py_files}
+            for fut in as_completed(futures):
+                fut.result()
+                progress.advance(task)
 
-    return copied, skipped_dupes, skipped_unprocessed
+    return counters["copied"], counters["skipped_dupes"], counters["skipped_unprocessed"]
 
 
 def _remove_empty_dirs(directory: str) -> int:
@@ -237,7 +253,7 @@ def run(args: argparse.Namespace):
         to_drop, n_clusters, n_in_clusters = _build_files_to_drop(dupes_path)
 
         copied, skipped_dupes, skipped_unprocessed = _copy_deduplicated(
-            input_dir, output_dir, to_drop, processed_files
+            input_dir, output_dir, to_drop, processed_files, n_workers=args.workers
         )
 
         removed_dirs = _remove_empty_dirs(output_dir)
