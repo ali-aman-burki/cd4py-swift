@@ -156,6 +156,3 @@ dataset/
 ## License
 
 MIT — see [LICENSE](LICENSE).
-
-This project is a fork of [CD4Py](https://github.com/saltudelft/CD4Py) by Davide Giovanelli and Maliheh Izadi,
-originally licensed under GNU GPLv3. The core deduplication algorithm is theirs; the optimisations and extensions are ours.
