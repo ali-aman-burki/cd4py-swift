@@ -51,7 +51,7 @@ def build_parser(subparsers=None):
                    help="Enable GPU acceleration (FAISS-GPU for KNN, PyTorch for TF-IDF)")
     p.add_argument("--workers",    type=int, default=12,
                    help="CPU thread-pool size for parallel stages")
-    p.add_argument("--batch-size", type=int, default=262144,
+    p.add_argument("--batch-size", type=int, default=8192,
                    help="Documents per GPU batch for TF-IDF (GPU mode only)")
     return p
 
